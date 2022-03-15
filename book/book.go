@@ -23,7 +23,9 @@ func GetAllBooks(c *fiber.Ctx) error {
 	result := db.Find(&book)
 
 	if result.Error != nil {
-		return result.Error
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  result.Error,
+			"status": false})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
@@ -35,11 +37,59 @@ func GetAllBooks(c *fiber.Ctx) error {
 }
 
 func GetBook(c *fiber.Ctx) error {
-	return c.SendString("Get One Book endpoint")
+	id := c.Params("id")
+
+	book := new(Book)
+
+	db := database.DbConn()
+
+	result := db.Where("id = ?", id).Find(&book)
+
+	if result.Error != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  result.Error,
+			"status": false})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "One Book",
+		"books":   book,
+		"status":  true})
+
+	//return c.SendString("Get One Book endpoint")
 }
 
 func AddBook(c *fiber.Ctx) error {
-	return c.SendString("Create New Book endpoint")
+
+	book := new(Book)
+
+	db := database.DbConn()
+
+	if err := c.BodyParser(book); err != nil {
+		return err
+	}
+
+	bookData := Book{
+		Title:  book.Title,
+		Author: book.Author,
+		Isbn:   book.Isbn,
+	}
+
+	result := db.Create(bookData)
+
+	if result.Error != nil {
+		//return result.Error
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  result.Error,
+			"status": false})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "One Book",
+		"books":   book,
+		"status":  true})
+
+	//return c.SendString("Create New Book endpoint")
 }
 
 func DeleteBook(c *fiber.Ctx) error {

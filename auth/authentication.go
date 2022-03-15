@@ -17,7 +17,9 @@ func Login(c *fiber.Ctx) error {
 	user := new(User)
 
 	if err := c.BodyParser(user); err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  err,
+			"status": false})
 	}
 
 	userData := User{
@@ -31,7 +33,9 @@ func Login(c *fiber.Ctx) error {
 	//db.QueryFields("SELECT * FROM users WHERE username=? AND password=?", user.Username, user.Password)
 
 	if result.Error != nil {
-		return result.Error
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  result.Error,
+			"status": false})
 	}
 
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
@@ -49,7 +53,9 @@ func Register(c *fiber.Ctx) error {
 	user := new(User)
 
 	if err := c.BodyParser(user); err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  err,
+			"status": false})
 	}
 
 	userData := User{
