@@ -1,6 +1,8 @@
 package book
 
 import (
+	"fiber/database"
+
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -13,7 +15,23 @@ type Book struct {
 }
 
 func GetAllBooks(c *fiber.Ctx) error {
-	return c.SendString("Get All Books endpoint")
+
+	book := new(Book)
+
+	db := database.DbConn()
+
+	result := db.Find(&book)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+		"message": "All the Books",
+		"books":   book,
+		"status":  true})
+
+	//return c.SendString("Get All Books endpoint")
 }
 
 func GetBook(c *fiber.Ctx) error {
