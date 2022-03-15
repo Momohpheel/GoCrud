@@ -12,14 +12,14 @@ type User struct {
 }
 
 func Login(c *fiber.Ctx) error {
-	p := new(Person)
+	user := new(User)
 
-        if err := c.BodyParser(p); err != nil {
-            return err
-        }
+	if err := c.BodyParser(user); err != nil {
+		return err
+	}
 
-        log.Println(p.Name) // john
-        log.Println(p.Pass) // doe
+	return c.SendString(user.Username + user.Password)
+
 	//return c.Send(c.Body())
 	//return c.SendString("Login endpoint")
 }
