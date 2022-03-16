@@ -3,11 +3,14 @@ package main
 import (
 	"fiber/auth"
 	"fiber/book"
+	"fmt"
 	"log"
+	"os"
 
 	"fiber/database"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
 
 func setupRoute(app *fiber.App) {
@@ -22,8 +25,15 @@ func setupRoute(app *fiber.App) {
 	app.Delete("/api/v1/books/:id", book.DeleteBook)
 }
 func main() {
+
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 	result := fiber.New()
 	db := database.DbConn()
+
+	fmt.Println(os.Getenv("DB_DATABASE"))
 
 	db.AutoMigrate(&auth.User{})
 	db.AutoMigrate(&book.Book{})

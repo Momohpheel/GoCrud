@@ -9,9 +9,9 @@ import (
 
 type Book struct {
 	gorm.Model
-	Title  string `json:"title"`
-	Author string `json:"author"`
-	Isbn   uint   `json:"isbn"`
+	Title  string `validate:"required,min=3,max=32"`
+	Author string `validate:"required"`
+	Isbn   uint   `validate:"required"`
 }
 
 func GetAllBooks(c *fiber.Ctx) error {

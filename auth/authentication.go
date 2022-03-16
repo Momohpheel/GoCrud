@@ -2,8 +2,10 @@ package auth
 
 import (
 	"fiber/database"
+	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -29,7 +31,9 @@ func Login(c *fiber.Ctx) error {
 
 	db := database.DbConn()
 
-	result := db.Where("username = ?", user.Username).Where("password = ?", user.Password).First(&user)
+	//var result User
+	result := db.Where("username = ?", user.Username).First(&user)
+
 	//db.QueryFields("SELECT * FROM users WHERE username=? AND password=?", user.Username, user.Password)
 
 	if result.Error != nil {
@@ -38,10 +42,21 @@ func Login(c *fiber.Ctx) error {
 			"status": false})
 	}
 
-	return c.Status(fiber.StatusOK).JSON(&fiber.Map{
-		"status":  true,
-		"message": "User Logged-In Successfully",
-		"user":    userData})
+	status, msg := VerifyPassword(userData.Password, user.Password)
+
+	if status {
+		return c.Status(fiber.StatusOK).JSON(&fiber.Map{
+			"status":  true,
+			"message": "User Logged-In Successfully",
+			"user":    user})
+
+	} else {
+
+		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
+			"error":  msg,
+			"status": false})
+
+	}
 
 	//return c.SendString(user.Username + user.Password)
 
@@ -60,7 +75,7 @@ func Register(c *fiber.Ctx) error {
 
 	userData := User{
 		Username: user.Username,
-		Password: user.Password,
+		Password: hashPassword(user.Password),
 	}
 
 	db := database.DbConn()
@@ -70,4 +85,27 @@ func Register(c *fiber.Ctx) error {
 	//return c.SendString("User Registered Successfully")
 	return c.Status(fiber.StatusOK).JSON(&fiber.Map{"user": userData, "message": "User Registered Successfully"})
 	//return c.SendString("Register endpoint")
+}
+
+func hashPassword(password string) string {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(bytes)
+}
+
+func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
+	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	check := true
+	msg := ""
+
+	if err != nil {
+		msg = "Password is incorrect"
+		check = false
+	}
+
+	return check, msg
 }
