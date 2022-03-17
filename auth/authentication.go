@@ -3,7 +3,10 @@ package auth
 import (
 	"fiber/database"
 	"log"
+	"strconv"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -42,13 +45,35 @@ func Login(c *fiber.Ctx) error {
 			"status": false})
 	}
 
-	status, msg := VerifyPassword(userData.Password, user.Password)
+	//return c.JSON(userData.Username)
+	status, msg := VerifyPassword(user.Password, userData.Password)
 
 	if status {
+		claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+			Issuer:    strconv.Itoa(int(user.ID)),
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		})
+
+		token, err := claims.SignedString([]byte("secret"))
+
+		if err != nil {
+			return err
+		}
+
+		cookie := fiber.Cookie{
+			Name:     "jwt",
+			Value:    token,
+			Expires:  time.Now().Add(time.Minute * 5),
+			HTTPOnly: true,
+		}
+
+		c.Cookie(&cookie)
+
 		return c.Status(fiber.StatusOK).JSON(&fiber.Map{
 			"status":  true,
 			"message": "User Logged-In Successfully",
-			"user":    user})
+			"user":    user,
+			"token":   token})
 
 	} else {
 
@@ -61,6 +86,31 @@ func Login(c *fiber.Ctx) error {
 	//return c.SendString(user.Username + user.Password)
 
 	//return c.SendString("Login endpoint")
+}
+
+func UserInfo(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt")
+
+	token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte("secret"), nil
+	})
+
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&fiber.Map{
+			"error":  "Unauthorized",
+			"status": false})
+	}
+
+	claims := token.Claims.(*jwt.StandardClaims)
+
+	db := database.DbConn()
+
+	user := new(User)
+	//var result User
+	db.Where("id = ?", claims.Issuer).First(&user)
+
+	return c.JSON(user)
+
 }
 
 func Register(c *fiber.Ctx) error {
@@ -87,6 +137,19 @@ func Register(c *fiber.Ctx) error {
 	//return c.SendString("Register endpoint")
 }
 
+func Logout(c *fiber.Ctx) error {
+	cookie := fiber.Cookie{
+		Name:     "jwt",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour),
+		HTTPOnly: true,
+	}
+
+	c.Cookie(&cookie)
+
+	return c.Status(fiber.StatusOK).JSON(&fiber.Map{"message": "User Logged out Successfully"})
+
+}
 func hashPassword(password string) string {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 
@@ -98,7 +161,7 @@ func hashPassword(password string) string {
 }
 
 func VerifyPassword(userPassword string, providedPassword string) (bool, string) {
-	err := bcrypt.CompareHashAndPassword([]byte(providedPassword), []byte(userPassword))
+	err := bcrypt.CompareHashAndPassword([]byte(userPassword), []byte(providedPassword))
 	check := true
 	msg := ""
 

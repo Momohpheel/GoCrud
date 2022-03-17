@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var DB *gorm.DB
+
 func DbConn() *gorm.DB {
 
 	err := godotenv.Load(".env")
@@ -27,6 +29,8 @@ func DbConn() *gorm.DB {
 	if err != nil {
 		panic("failed to connect database")
 	}
+
+	DB = db
 
 	return db
 }

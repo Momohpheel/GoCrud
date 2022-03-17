@@ -10,27 +10,36 @@ import (
 	"fiber/database"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 )
 
 func setupRoute(app *fiber.App) {
-	app.Post("api/v1/login", auth.Login)
-	app.Post("api/v1/register", auth.Register)
+	group := app.Group("api/v1")
+	group.Post("/login", auth.Login)
+	group.Post("/register", auth.Register)
+	group.Get("/user", auth.UserInfo)
+	group.Post("/logout", auth.Logout)
 
-	//app.Use()
+	//group.Use()
 
-	app.Get("/api/v1/books", book.GetAllBooks)
-	app.Get("/api/v1/books/:id", book.GetBook)
-	app.Post("/api/v1/book", book.AddBook)
-	app.Delete("/api/v1/books/:id", book.DeleteBook)
+	group.Get("/books", book.GetAllBooks)
+	group.Get("/books/:id", book.GetBook)
+	group.Post("/book", book.AddBook)
+	group.Delete("/books/:id", book.DeleteBook)
 }
 func main() {
 
 	err := godotenv.Load(".env")
+
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
 	result := fiber.New()
+
+	result.Use(cors.New(cors.Config{
+		AllowCredentials: true,
+	}))
 	db := database.DbConn()
 
 	fmt.Println(os.Getenv("DB_DATABASE"))
