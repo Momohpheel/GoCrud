@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -14,17 +15,47 @@ import (
 
 type User struct {
 	gorm.Model
-	Username string `json:"username"`
-	Password string `json:"password"`
+	Username string `json:"username" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
+type ErrorResponse struct {
+	FailedField string
+	Tag         string
+	Value       string
+}
+
+var validate = validator.New()
+
+func ValidateStruct(user User) []*ErrorResponse {
+
+	var errors []*ErrorResponse
+	err := validate.Struct(user)
+	if err != nil {
+		for _, err := range err.(validator.ValidationErrors) {
+			var element ErrorResponse
+			element.FailedField = err.StructNamespace()
+			element.Tag = err.Tag()
+			element.Value = err.Param()
+			errors = append(errors, &element)
+		}
+	}
+	return errors
 }
 
 func Login(c *fiber.Ctx) error {
-	user := new(User)
 
+	user := new(User)
 	if err := c.BodyParser(user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"error":  err,
 			"status": false})
+	}
+
+	errors := ValidateStruct(*user)
+	if errors != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(errors)
+
 	}
 
 	userData := User{
@@ -121,6 +152,12 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(&fiber.Map{
 			"error":  err,
 			"status": false})
+	}
+
+	errors := ValidateStruct(*user)
+	if errors != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errors)
+
 	}
 
 	userData := User{

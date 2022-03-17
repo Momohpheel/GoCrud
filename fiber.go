@@ -3,6 +3,7 @@ package main
 import (
 	"fiber/auth"
 	"fiber/book"
+	"fiber/middleware"
 	"fmt"
 	"log"
 	"os"
@@ -36,6 +37,8 @@ func main() {
 		log.Fatal("Error loading .env file")
 	}
 	result := fiber.New()
+
+	result.Use(middleware.Authenticate(result))
 
 	result.Use(cors.New(cors.Config{
 		AllowCredentials: true,
